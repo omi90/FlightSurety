@@ -13,7 +13,6 @@ contract('Flight Surety Tests', async (accounts) => {
   /****************************************************************************************/
   /* Operations and Settings                                                              */
   /****************************************************************************************/
-
   it(`(multiparty) has correct initial isOperational() value`, async function () {
 
     // Get operating status
