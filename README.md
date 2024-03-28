@@ -2,6 +2,12 @@
 
 FlightSurety is a sample application project for Udacity's Blockchain course.
 
+### Programming Libraries Used:
+- **Truffle v5.8.1 (core: 5.8.1):** used to deploy and test smart contracts.
+- **Solidity v0.5.16 (solc-js):** high-level langauge for writing smart contracts.
+- **Node v18.15.0:** used for building web applications quickly
+- **Web3.js v1.8.2:** used to allow the smart contracts to interact with a local/remote Ethereum node with an HTTP, HTTPS, or IPC connection.
+
 ## Install
 
 This repository contains Smart Contract code in Solidity (using Truffle), tests (also using Truffle), dApp scaffolding (using HTML, CSS and JS) and server app scaffolding.
