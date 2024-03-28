@@ -13,10 +13,10 @@ contract FlightSuretyData {
     bool private operational = true;                                    // Blocks all state changes throughout the contract if false
     
     uint private MINIMUM_AIRLINES_FOR_CONSENSUS = 4;
-    uint public INSURANCE_PAID = 1;
-    uint public INSURANCE_CLOSED = 2;
-    uint public INSURANCE_UNKNOWN = 0;
-    uint public INSURANCE_BOUGHT = 1;
+    uint8 public INSURANCE_PAID = 1;
+    uint8 public INSURANCE_CLOSED = 2;
+    uint8 public INSURANCE_UNKNOWN = 0;
+    uint8 public INSURANCE_BOUGHT = 1;
 
     mapping(address => Airline) private address_airline;
     uint256 private countOfAirlines = 0;
@@ -47,7 +47,8 @@ contract FlightSuretyData {
         address payable passengerAddress;
     }
     struct Flight {
-        PassengerInsurance[] passengerList;
+        mapping(uint => PassengerInsurance) passengerList;
+        uint passengersSize;
         uint8 statusCode;
         uint256 updatedTimestamp;        
         address airline;
@@ -238,6 +239,43 @@ contract FlightSuretyData {
         return address_airline[airlineAddress].approvalRequired;
     }
 
+    /**
+    * @dev Register a future flight for insuring.
+    *
+    */  
+    function registerFlight
+                                (address airline, string memory flight, uint256 timestamp
+                                )
+                                public
+                                payable
+                                requireIsOperational
+    {
+        bytes32 key = getFlightKey(airline, flight, timestamp);
+        flights[key] = Flight({
+            passengersSize: 0,
+            airline: airline,
+            updatedTimestamp: timestamp,
+            statusCode: INSURANCE_UNKNOWN
+        });
+        buy(key);
+    }
+
+    /**
+    * @dev Called to update flight status
+    *
+    */ 
+    function saveFlightStatus(
+                                    address airline,
+                                    string memory flight,
+                                    uint256 timestamp,
+                                    uint8 statusCode
+                                )
+                                public
+                                requireIsOperational
+    {
+        bytes32 key = getFlightKey(airline, flight, timestamp);
+        flights[key].statusCode = statusCode;
+    }
    /**
     * @dev Buy insurance for a flight
     *
@@ -245,19 +283,17 @@ contract FlightSuretyData {
     function buy
                             (   bytes32 flightKey                          
                             )
-                            external
+                            public
                             payable
                             requireIsOperational
     {
-        for(uint i=0;i<flights[flightKey].passengerList.length;i++){
-            if(flights[flightKey].passengerList[i].passengerAddress == msg.sender){
-                flights[flightKey].passengerList[i].isInsured = true;
-                flights[flightKey].passengerList[i].paidAmount =  msg.value;
-                flights[flightKey].passengerList[i].insuranceAmount =  msg.value.mul(15).div(10);
-                flights[flightKey].passengerList[i].status = INSURANCE_BOUGHT;
-                flights[flightKey].passengerList[i].passengerAddress = msg.sender;
-            }
-        }
+        uint currentSize = flights[flightKey].passengersSize;
+        flights[flightKey].passengerList[currentSize].isInsured = true;
+        flights[flightKey].passengerList[currentSize].paidAmount =  msg.value;
+        flights[flightKey].passengerList[currentSize].insuranceAmount =  msg.value.mul(15).div(10);
+        flights[flightKey].passengerList[currentSize].status = INSURANCE_BOUGHT;
+        flights[flightKey].passengerList[currentSize].passengerAddress = msg.sender;
+        flights[flightKey].passengersSize = flights[flightKey].passengersSize + 1;
     }
 
     /**
@@ -269,7 +305,7 @@ contract FlightSuretyData {
                                 external
                                 requireIsOperational
     {
-        for(uint i=0;i<flights[flightKey].passengerList.length;i++){
+        for(uint i=0;i<flights[flightKey].passengersSize;i++){
             flights[flightKey].passengerList[i].status = INSURANCE_PAID;
             passengers[flights[flightKey].passengerList[i].passengerAddress].walletBalance =
                 passengers[flights[flightKey].passengerList[i].passengerAddress].walletBalance +
@@ -310,6 +346,17 @@ contract FlightSuretyData {
                             requireMinimumFund
     {
         address_airline[msg.sender].isFunded = true;
+    }
+
+    /**
+     *  @dev Close Insurance
+    */
+    function closeInsurance(bytes32 flightKey) external requireIsOperational{
+        for(uint i=0;i<flights[flightKey].passengersSize;i++){
+            if (flights[flightKey].passengerList[i].status != INSURANCE_UNKNOWN) {    
+                flights[flightKey].passengerList[i].status = INSURANCE_CLOSED;
+            }
+        }
     }
 
     function getFlightKey

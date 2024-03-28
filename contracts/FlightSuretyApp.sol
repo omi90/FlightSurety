@@ -121,12 +121,15 @@ contract FlightSuretyApp {
     *
     */  
     function registerFlight
-                                (
+                                (address airline, string memory flight, uint256 timestamp
                                 )
-                                external
-                                pure
+                                public
+                                payable
+                                requireIsOperational
     {
-
+        require(msg.value <= 1 ether, 'Maximum payment value is 1 ether');
+        require(msg.value > 0, 'Minimum payment value is required');
+        flightSuretyData.registerFlight(airline, flight, timestamp);
     }
     
    /**
@@ -141,8 +144,15 @@ contract FlightSuretyApp {
                                     uint8 statusCode
                                 )
                                 internal
-                                pure
+                                requireIsOperational
     {
+        flightSuretyData.saveFlightStatus(airline, flight, timestamp, statusCode);
+        bytes32 key = getFlightKey(airline, flight, timestamp);
+        if (statusCode == STATUS_CODE_LATE_AIRLINE) {
+            flightSuretyData.creditInsurees(key);
+        } else {
+            flightSuretyData.closeInsurance(key);
+        }
     }
 
 
